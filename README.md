@@ -100,7 +100,7 @@ expected to be able to:
 
     -   Bivand Roger S., Pebesma, Edzer J., and Gómez-Rubio, Virgilio
         (2008), *Applied Spatial Data Analysis with R*, Springer (eBook
-        available at TTU library).
+	available at [TTU library](https://link-springer-com.lib-e2.lib.ttu.edu/book/10.1007%2F978-0-387-78171-6)).
 
     -   Cressie, N., & Wikle, C. K. (2011). *Statistics for
         Spatio-temporal Data*. John Wiley & Sons.
