@@ -408,7 +408,7 @@ Some userful shortcuts: `Ctrl+Enter` (send code), `Ctrl+Shift+C`
 	Import of Excel file. Note: working with tab- or comma-delimited files is more flexible and preferred.
 	```{r read_excel, eval=FALSE}
 	library(gdata)
-	myDF <- read.xls"myData.xls")
+	myDF <- read.xls("myData.xls")
 	```
 <!--
 	Import of Google Sheets. The following example imports a sample Google Sheet from [here](https://docs.google.com/spreadsheets/d/1U-32UcwZP1k3saKeaH1mbvEAOfZRdNHNkWK2GI1rpPM/edit#gid=472150521).
