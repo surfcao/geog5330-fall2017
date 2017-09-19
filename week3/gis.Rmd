@@ -9,7 +9,7 @@ knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',  warning=FAL
 
 ```{r load, echo=F, eval=T}
 #rm(list=ls())
-#x <- c("sp", "rgdal", "rgeos", "maptools", "classInt", "RColorBrewer", "GISTools", "maps", "raster", 'ggmap')
+x <- c("sp", "rgdal", "rgeos", "maptools", "classInt", "RColorBrewer", "GISTools", "maps", "raster", 'ggmap')
 #install.packages(x) # warning: this may take a number of minutes
 lapply(x, library, character.only = TRUE) #load the required packages
 ```
@@ -148,7 +148,34 @@ plot(projCropland)
 
 # Spatial analysis with R
 
+```{r load_library1, echo=T, eval=T}
 
+#subsetting a spatial dataframe
+LubbockBlock<-readOGR("./Data", "LubbockBlockNew") #read polygon shapefile
+
+selection = LubbockBlock[LubbockBlock$Pop2010>500,]
+plot(selection)
+
+#select by clicking
+selected = click(LubbockBlock)
+
+extent = drawExtent()
+
+extent=as(extent,'SpatialPolygons')
+proj4string(extent)=proj4string(selection)
+
+# performace erase 
+plot(erase(selection, extent))
+
+
+poly = drawPoly()
+proj4string(poly) = proj4string(LubbockBlock)
+
+# performe clip
+cropselection = crop(LubbockBlock,poly)
+plot(cropselection)
+
+```
 ## vector analysis (overlay)
 
 ```{r vector, echo=T, eval=T }
@@ -202,6 +229,15 @@ writeOGR(bears, ".", "bears-by-park", driver="ESRI Shapefile")
 ## Raster analysis
 
 ```{r raster, eval=T, echo=T}
+
+tmin=getData('worldclim', var='tmin', res=10)
+
+# Raster calculator
+diff=tmin$tmin1 - tmin$tmin10
+
+## the following code is faster for large datasets. 
+overlay(tmin$tmin1, tmin$tmin10, fun=function(x,y){return (x-y)})
+
 elevation <- getData("alt", country = "ESP")
 slope <- terrain(elevation, opt = "slope")
 aspect <- terrain(elevation, opt = "aspect")
