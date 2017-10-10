@@ -272,7 +272,12 @@ test=as.data.frame(summary.predictive)
 coordinates(test)=predSites
 gridded(test)=TRUE
 
-spplot(test, 'predictive.mean')
-spplot(test, 'predictive.variance')
+spbayes1=spplot(test, 'predictive.mean')
+spbayes2-spplot(test, 'predictive.sd')
+
+
+print(spbayes1, position = c(0,.5,.5,1),more=T)
+print(spbayes2, position = c(.5,.5,1,1))
+
 ```
 
