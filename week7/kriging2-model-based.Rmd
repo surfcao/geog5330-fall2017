@@ -273,7 +273,7 @@ coordinates(test)=predSites
 gridded(test)=TRUE
 
 spbayes1=spplot(test, 'predictive.mean')
-spbayes2-spplot(test, 'predictive.sd')
+spbayes2=spplot(test, 'predictive.sd')
 
 
 print(spbayes1, position = c(0,.5,.5,1),more=T)
