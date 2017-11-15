@@ -1,5 +1,5 @@
 ---
-title: "Week 11: Effects of Spatial Dependence"
+title: "Week 10: Effects of Spatial Dependence"
 output: github_document
 ---
 
@@ -7,7 +7,7 @@ output: github_document
 
 knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='Figs/',  warning=FALSE, message=FALSE, results='hide')
 rm(list=ls())
-library(fields)
+kibrary(fields)
 library(mvtnorm)
 ```
 

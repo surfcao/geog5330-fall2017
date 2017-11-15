@@ -1,0 +1,260 @@
+
+---
+title: "Week 12: Raster data analysis"
+output: github_document
+---
+
+```{r global_options, eval=T, echo=F,results='hide', error=F, warning=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='Figs/',  warning=FALSE, message=FALSE, results='hide')
+rm(list=ls())
+library(rgdal)
+library(raster)
+
+library(devtools)
+install_github('loicdtx/bfastSpatial')
+# load the package
+library(bfastSpatial)
+
+```
+
+
+```{r raster1, eval=T, echo=T, eval=T}
+
+# The raster package produces and uses R objects of three different
+# classes: RasterLayer, RasterBrick and RasterStack.
+
+
+# create a new random raster
+
+xy <- matrix(rnorm(400),20,20)
+new=raster(xy)
+extent(new)=c(-90, 32, -80, 40)
+projection(new) <- CRS("+proj=longlat +datum=WGS84")
+plot(new)
+
+
+# Read a raster dataset. Gewata is the a subset from a remote sensing
+# image scene acquired by the Landsat 7 sensor.
+                                        
+gewata <- brick('gewata.tif')
+
+# Plot the first layer of the RasterBrick
+plot(gewata, 1)
+# Crop a raster
+e<-drawExtent(show=T)
+gewataCrop <- crop(gewata, e)
+
+# Write a raster
+
+writeRaster(x=gewataCrop, filename='sub.tif')
+
+# raster calculator
+# E.g., NDVI=(NIR-R)/(NIR+R)
+
+ndvi <- (gewata[[4]] - gewata[[3]]) / (gewata[[4]] + gewata[[3]])
+plot(ndvi)
+
+# reproject a raster
+
+ndviLL <- projectRaster(ndvi, crs='+proj=longlat')
+plot(ndviLL)                                        
+                                        
+```
+
+# Spatiotemporal change detection of raster datasets
+
+```{R spatial2, eval=T, echo=T}
+
+#  NDVI time series raster brick
+data(tura)
+
+# show the layer names
+names(tura)
+
+# retrieve the scene information of the NDVI
+s <- getSceneinfo(names(tura))
+s
+# add a column for years and plot # of scenes per year
+s$year <- as.numeric(substr(s$date, 1, 4))
+hist(s$year, breaks=c(1984:2014), main="p170r55: Scenes per Year", 
+     xlab="year", ylab="# of scenes")
+
+# count number of observations
+obs <- countObs(tura)
+summary(obs)
+# plot it out
+plot(obs)
+
+# mean
+meanVI <- summaryBrick(tura, fun=mean, na.rm=TRUE)
+plot(meanVI)
+
+# customize a function that takes a vector as an argument to be used in summarybrick()
+checkThresh <- function(x){
+    # first, get rid of NA's
+    x <- x[!is.na(x)]
+    # if there still values left, count how many are above the threshold
+    # otherwise, return a 0
+    if(length(x) > 0){
+        y <- length(x[x > 7000])
+    } else {
+        y <- 0
+    }
+    # return the value
+    return(y)
+}
+# pass this functino to summaryBrick
+customStat <- summaryBrick(tura, fun=checkThresh)
+plot(customStat, main = "# of observations where NDVI > 0.7")
+
+
+# median values for all layers
+medVI <- summaryBrick(tura, fun=median, na.rm=TRUE)
+# only ETM+ layers
+medVI_ETM <- summaryBrick(tura, fun=median, na.rm=TRUE, sensor="ETM+")
+# all layers between 2000 and 2005 (inclusive)
+medVI_00_05 <- summaryBrick(tura, fun=median, na.rm=TRUE, minDate="2000-01-01", 
+                            maxDate="2005-12-31")
+# all layers after 2005
+medVI_06_13 <- summaryBrick(tura, fun=median, na.rm=TRUE, minDate=c(2006, 1))
+# plot and compare
+op <- par(mfrow=c(2, 2))
+plot(medVI, main = "median NDVI")
+plot(medVI_ETM, main = "only ETM+")
+plot(medVI_00_05, main = "2000-2005")
+plot(medVI_06_13, main = "2006-2013")
+
+###########################
+## Spatial BFASTMonitor
+###########################
+
+# load tura RasterBrick
+data(tura)
+# plot the 42nd layer
+plot(tura, 42)
+# run bfmPixel() in interactive mode with a monitoring period 
+# starting @ the 1st day in 2009
+bfm <- bfmPixel(tura, start=c(2009, 1), interactive=TRUE)
+# choose the pixel whose time series you want to see by clicking on the map you plotted a moment ago
+bfm
+plot(bfm$bfm)
+
+targcell <- 3492
+bfm <- bfmPixel(tura, cell=targcell, start=c(2009, 1))
+# inspect and plot the $bfm output
+bfm$bfm
+
+plot(bfm$bfm)
+
+# use a harmonic model only
+bfm1 <- bfmPixel(tura, cell=targcell, start=c(2009, 1), 
+                 formula=response~harmon, plot=TRUE)
+
+# same, but with an order of 1
+bfm2 <- bfmPixel(tura, cell=targcell, start=c(2009, 1), 
+                 formula=response~harmon, order=1, plot=TRUE)
+
+
+# only trend
+bfm3 <- bfmPixel(tura, cell=targcell, start=c(2009, 1), 
+                 formula=response~trend, plot=TRUE)
+
+# bfmPixel using a 1-year monitoring period
+bfm4 <- bfmPixel(tura, cell=targcell, start=c(2009, 1), 
+                 monend=c(2010, 1), plot=TRUE)
+
+# apply bfmPixel only on ETM+ data
+bfm5 <- bfmPixel(tura, cell=targcell, start=c(2009, 1), 
+                 sensor="ETM+", plot=TRUE)
+
+
+# Working with raster time series: bfmSpatial
+
+# By default, three raster layers are output by bfmSpatial:
+# 1. breakpoint timing - in decimal year format 2. change magnitude -
+# the medial residual between expected and observed values in the
+# monitoring period 3. error flag - possible values of 1 if an error has
+# been encountered in a particular pixel, and NA where the algorithm was
+# successful (or a mask had already been applied previously)
+
+# run bfmSpatial over tura for a monitoring period of 2009 -
+
+bfm <- bfmSpatial(tura, start=c(2009, 1), order=1, mc.cores=8)
+  
+# plot the result
+plot(bfm)
+
+### found out the change time
+
+change <- raster(bfm, 1)
+months <- changeMonth(change)
+# set up labels and colourmap for months
+monthlabs <- c("jan", "feb", "mar", "apr", "may", "jun", 
+               "jul", "aug", "sep", "oct", "nov", "dec")
+cols <- rainbow(12)
+plot(months, col=cols, breaks=c(1:12), legend=FALSE)
+# insert custom legend
+legend("bottomright", legend=monthlabs, cex=0.5, fill=cols, ncol=2)
+
+### find out the change magnitude
+
+# extract magn raster
+magn <- raster(bfm, 2)
+# make a version showing only breakpoing pixels
+magn_bkp <- magn
+magn_bkp[is.na(change)] <- NA
+op <- par(mfrow=c(1, 2))
+plot(magn_bkp, main="Magnitude: breakpoints")
+plot(magn, main="Magnitude: all pixels")
+
+### change units
+magn <- raster(bfm, 2) / 10000
+
+bfm09 <- bfmSpatial(tura, start=c(2009, 1), monend=c(2010, 1), order=1, mc.cores=8)
+# extract change
+change09 <- raster(bfm09, 1)
+# extract and rescale magnitude
+magn09 <- raster(bfm09, 2) / 10000
+# remove all non-breakpoints
+magn09[is.na(change09)] <- NA
+
+# extract and rescale magnitude and apply a -500 threshold
+magn09thresh <- magn09
+magn09thresh[magn09 > -0.05] <- NA
+# compare
+op <- par(mfrow=c(1, 2))
+plot(magn09, main="magnitude")
+plot(magn09thresh, main="magnitude < -0.05")
+
+par(op)
+
+## filtering out the small patches based on the threshhold values.
+
+magn09_sieve <- areaSieve(magn09thresh, thresh=1800)
+magn09_areasieve <- areaSieve(magn09thresh)
+
+magn09_as_rook <- areaSieve(magn09thresh, directions=4)
+# compare all magn rasters
+op <- par(mfrow=c(2, 2))
+plot(magn09thresh, main="magnitude")
+plot(magn09_sieve, main="pixel sieve")
+plot(magn09_areasieve, main="0.5ha sieve")
+plot(magn09_as_rook, main="0.5ha sieve, rook's case")
+
+
+changeSize_queen <- clumpSize(magn09_areasieve)
+changeSize_rook <- clumpSize(magn09_areasieve, directions=4)
+# compare
+op <- par(mfrow=c(1, 2))
+plot(changeSize_queen, col=bpy.colors(50), main="Clump size: Queen's case")
+plot(changeSize_rook, col=bpy.colors(50), main="Clump size: Rook's case")
+
+
+changeSize <- clumpSize(magn09_areasieve, f=900/10000)
+plot(changeSize, col=bpy.colors(50), main="Clump size (hectares)")
+
+
+changeSize <- clumpSize(magn09_areasieve, f=900/10000, stats=TRUE)
+print(changeSize$stats)
+
+```
