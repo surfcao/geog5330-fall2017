@@ -17,7 +17,6 @@ class(locs$Date)
 
 da <- as.POSIXct(strptime(as.character(locs$Date),"%y%m%d"))
 
-
 puech <- as.ltraj(xy = locs[,c("X","Y")], date = da, id = locs$Name)
 puech
 
@@ -163,10 +162,7 @@ gus <- porpoise[1]
 gus
 plot(gus)
 
-
-
 acfdist.ltraj(gus, "dist", lag=20)
-
 plotltr(gus, "dist")
 
 
@@ -180,7 +176,6 @@ bestpartmod(mod)
 
 (pm <- partmod.ltraj(gus, 4, mod))
 
-
 plot(pm)
 
 plotltr(gus, "dist")
@@ -189,7 +184,7 @@ tmp <- lapply(1:length(pm$ltraj), function(i){coul <- c("red","green","blue")[as
     lines(pm$ltraj[[i]]$date, rep(tested.means[pm$stats$mod[i]], nrow(pm$ltraj[[i]])),col=coul, lwd=2)})
 
 
-# Simulate 
+# Simulate a null model of trajectory
 
 sim <- simm.crw(1:1000, r=0.95)
 plot(sim, addp=F)
